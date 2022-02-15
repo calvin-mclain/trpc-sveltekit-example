@@ -1,6 +1,9 @@
 <script lang="ts">
   import Footer from '$lib/components/Footer.svelte';
   import Header from '$lib/components/Header.svelte';
+  import { QueryClient, QueryClientProvider } from '@sveltestack/svelte-query';
+
+  const queryClient = new QueryClient();
 </script>
 
 <svelte:head>
@@ -32,11 +35,13 @@
   </style>
 </svelte:head>
 
-<Header />
-<main class="container">
-  <slot />
-</main>
-<Footer />
+<QueryClientProvider client={queryClient}>
+  <Header />
+  <main class="container">
+    <slot />
+  </main>
+  <Footer />
+</QueryClientProvider>
 
 <style>
   main {

@@ -9,8 +9,8 @@ const client = trpc.createTRPCClient<Router>({
   transformer: trpcTransformer
 });
 
-type Query = keyof Router['_def']['queries'];
-type Mutation = keyof Router['_def']['mutations'];
+export type Query = keyof Router['_def']['queries'];
+export type Mutation = keyof Router['_def']['mutations'];
 
 export type InferQueryOutput<RouteKey extends Query> = inferProcedureOutput<
   Router['_def']['queries'][RouteKey]

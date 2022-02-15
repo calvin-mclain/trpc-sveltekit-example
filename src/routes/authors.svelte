@@ -7,11 +7,12 @@
   import TextInput from '$lib/components/inputs/TextInput.svelte';
   import ModalEditor from '$lib/components/ModalEditor.svelte';
   import type { Load } from '@sveltejs/kit';
+  import { useQuery } from '@sveltestack/svelte-query';
   import debounce from 'debounce';
 
   export const load: Load = async () => {
-    const authors = await trpc.query('authors:browse');
-    return { props: { authors } };
+    const initialData = await trpc.query('authors:browse');
+    return { props: { initialData } };
   };
 </script>
 
@@ -30,23 +31,20 @@
     bio: ''
   });
 
-  let loading = false;
   let query = '';
-  export let authors: InferQueryOutput<'authors:browse'> = [];
+  export let initialData: InferQueryOutput<'authors:browse'> = [];
   let author = newAuthor();
   let editorErrors: EditorErrors;
   let editorVisible = false;
   let editorBusy = false;
 
-  const reloadAuthors = async () => {
-    loading = true;
-    authors = await trpc.query('authors:browse', query);
-    loading = false;
-  };
+  const authors = useQuery(['authors:browse', query], () => trpc.query('authors:browse', query), {
+    initialData
+  });
 
   const handleFilter = debounce((e: CustomEvent<string>) => {
     query = e.detail;
-    reloadAuthors();
+    $authors.refetch();
   }, 500);
 
   const handleAdd = () => {
@@ -65,9 +63,8 @@
   };
 
   const handleDelete = async (e: CustomEvent<{ itemKey: string }>) => {
-    loading = true;
     await trpc.mutation('authors:delete', e.detail.itemKey);
-    reloadAuthors();
+    $authors.refetch();
   };
 
   const handleEditorClose = () => {
@@ -82,7 +79,7 @@
       await trpc.mutation('authors:save', author);
       editorVisible = false;
       author = newAuthor();
-      reloadAuthors();
+      $authors.refetch();
     } catch (err) {
       editorErrors = getEditorErrors(err);
     }
@@ -95,10 +92,10 @@
 </svelte:head>
 
 <DataTable
-  {loading}
+  loading={$authors.isLoading}
   title="Authors"
   filterDescription="first or last name"
-  items={authors}
+  items={$authors.data || []}
   key="id"
   columns={[
     { title: 'First name', prop: 'firstName' },
