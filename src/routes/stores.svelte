@@ -6,12 +6,13 @@
   import TextInput from '$lib/components/inputs/TextInput.svelte';
   import ModalEditor from '$lib/components/ModalEditor.svelte';
   import type { Load } from '@sveltejs/kit';
+  import { useQuery } from '@sveltestack/svelte-query';
   import debounce from 'debounce';
 
   export const load: Load = async () => {
-    const stores = await trcp.query('stores:browse');
+    const storesInitialData = await trcp.query('stores:browse');
     const bookList = await trcp.query('books:list');
-    return { props: { stores, bookList } };
+    return { props: { storesInitialData, bookList } };
   };
 </script>
 
@@ -27,30 +28,20 @@
 
   let loading = false;
   let query = '';
-  export let stores: InferQueryOutput<'stores:browse'> = [];
+  export let storesInitialData: InferQueryOutput<'stores:browse'> = [];
   export let bookList: InferQueryOutput<'books:list'> = [];
   let store = newStore();
   let editorVisible = false;
   let editorBusy = false;
   let editorErrors: EditorErrors;
 
-  const reloadStores = async () => {
-    loading = true;
-    stores = await trcp.query('stores:browse', query);
-    loading = false;
-  };
-
-  const reloadBooks = async () => {
-    editorBusy = true;
-    bookList = await trcp.query('books:list');
-    editorBusy = false;
-  };
-
-  $: if (editorBusy) reloadBooks();
+  const stores = useQuery(['stores:browse', query], () => trcp.query('stores:browse', query), {
+    initialData: storesInitialData
+  });
 
   const handleFilter = debounce((e: CustomEvent<string>) => {
     query = e.detail;
-    reloadStores();
+    $stores.refetch();
   }, 500);
 
   const handleAdd = () => {
@@ -71,7 +62,7 @@
   const handleDelete = async (e: CustomEvent<{ itemKey: string }>) => {
     loading = true;
     await trcp.mutation('stores:delete', e.detail.itemKey);
-    reloadStores();
+    $stores.refetch();
   };
 
   const handleEditorClose = () => {
@@ -86,7 +77,7 @@
       await trcp.mutation('stores:save', store);
       editorVisible = false;
       store = newStore();
-      reloadStores();
+      $stores.refetch();
     } catch (err) {
       editorErrors = getEditorErrors(err);
     }
@@ -99,10 +90,10 @@
 </svelte:head>
 
 <DataTable
-  {loading}
+  loading={$stores.isLoading}
   title="Stores"
   filterDescription="name"
-  items={stores}
+  items={$stores.data || []}
   key="id"
   columns={[
     { title: 'Name', prop: 'name' },

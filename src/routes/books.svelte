@@ -8,11 +8,12 @@
   import TextInput from '$lib/components/inputs/TextInput.svelte';
   import ModalEditor from '$lib/components/ModalEditor.svelte';
   import type { Load } from '@sveltejs/kit';
+  import { useQuery } from '@sveltestack/svelte-query';
   import debounce from 'debounce';
 
   export const load: Load = async () => {
-    const books = await trpc.query('books:browse');
-    return { props: { books } };
+    const initialData = await trpc.query('books:browse');
+    return { props: { initialData } };
   };
 </script>
 
@@ -33,19 +34,16 @@
     excerpt: ''
   });
 
-  let loading = false;
   let query = '';
-  export let books: InferQueryOutput<'books:browse'> = [];
+  export let initialData: InferQueryOutput<'books:browse'> = [];
   let book = newBook();
   let editorVisible = false;
   let editorBusy = false;
   let editorErrors: EditorErrors;
 
-  const reloadBooks = async () => {
-    loading = true;
-    books = await trpc.query('books:browse', query);
-    loading = false;
-  };
+  const books = useQuery(['books:browse', query], () => trpc.query('books:browse', query), {
+    initialData
+  });
 
   const getAuthorOptions = () =>
     trpc.query('authors:list').then((authors) =>
@@ -57,7 +55,7 @@
 
   const handleFilter = debounce((e: CustomEvent<string>) => {
     query = e.detail;
-    reloadBooks();
+    $books.refetch();
   }, 500);
 
   const handleAdd = () => {
@@ -76,9 +74,8 @@
   };
 
   const handleDelete = async (e: CustomEvent<{ itemKey: string }>) => {
-    loading = true;
     await trpc.mutation('books:delete', e.detail.itemKey);
-    reloadBooks();
+    $books.refetch();
   };
 
   const handleEditorClose = () => {
@@ -93,7 +90,7 @@
       await trpc.mutation('books:save', book);
       editorVisible = false;
       book = newBook();
-      reloadBooks();
+      $books.refetch();
     } catch (err) {
       editorErrors = getEditorErrors(err);
     }
@@ -106,10 +103,10 @@
 </svelte:head>
 
 <DataTable
-  {loading}
+  loading={$books.isLoading}
   title="Books"
   filterDescription="title or author"
-  items={books}
+  items={$books.data || []}
   key="id"
   columns={[
     { title: 'Title', prop: 'title' },
