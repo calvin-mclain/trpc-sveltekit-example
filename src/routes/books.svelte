@@ -11,8 +11,8 @@
   import { useQuery } from '@sveltestack/svelte-query';
   import debounce from 'debounce';
 
-  export const load: Load = async () => {
-    const initialData = await trpc.query('books:browse');
+  export const load: Load = async ({ fetch }) => {
+    const initialData = await trpc(fetch).query('books:browse');
     return { props: { initialData } };
   };
 </script>
@@ -41,17 +41,19 @@
   let editorBusy = false;
   let editorErrors: EditorErrors;
 
-  const books = useQuery(['books:browse', query], () => trpc.query('books:browse', query), {
+  const books = useQuery(['books:browse', query], () => trpc().query('books:browse', query), {
     initialData
   });
 
   const getAuthorOptions = () =>
-    trpc.query('authors:list').then((authors) =>
-      authors.map(({ id, firstName, lastName }) => ({
-        value: id,
-        label: `${firstName} ${lastName}`
-      }))
-    );
+    trpc()
+      .query('authors:list')
+      .then((authors) =>
+        authors.map(({ id, firstName, lastName }) => ({
+          value: id,
+          label: `${firstName} ${lastName}`
+        }))
+      );
 
   const handleFilter = debounce((e: CustomEvent<string>) => {
     query = e.detail;
@@ -68,13 +70,13 @@
     editorErrors = undefined;
     editorBusy = true;
     editorVisible = true;
-    const data = await trpc.query('books:read', e.detail.itemKey);
+    const data = await trpc().query('books:read', e.detail.itemKey);
     if (data) book = { ...data, price: data.price.toFixed(2), excerpt: data.excerpt || '' };
     editorBusy = false;
   };
 
   const handleDelete = async (e: CustomEvent<{ itemKey: string }>) => {
-    await trpc.mutation('books:delete', e.detail.itemKey);
+    await trpc().mutation('books:delete', e.detail.itemKey);
     $books.refetch();
   };
 
@@ -87,7 +89,7 @@
   const handleEditorSave = async () => {
     editorBusy = true;
     try {
-      await trpc.mutation('books:save', book);
+      await trpc().mutation('books:save', book);
       editorVisible = false;
       book = newBook();
       $books.refetch();

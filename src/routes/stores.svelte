@@ -1,7 +1,7 @@
 <script context="module" lang="ts">
   import getEditorErrors from '$lib/client/getEditorErrors';
   import type { InferMutationInput, InferQueryOutput } from '$lib/client/trpc';
-  import trcp from '$lib/client/trpc';
+  import trpc from '$lib/client/trpc';
   import DataTable from '$lib/components/DataTable.svelte';
   import TextInput from '$lib/components/inputs/TextInput.svelte';
   import ModalEditor from '$lib/components/ModalEditor.svelte';
@@ -9,9 +9,9 @@
   import { useQuery } from '@sveltestack/svelte-query';
   import debounce from 'debounce';
 
-  export const load: Load = async () => {
-    const storesInitialData = await trcp.query('stores:browse');
-    const bookList = await trcp.query('books:list');
+  export const load: Load = async ({ fetch }) => {
+    const storesInitialData = await trpc(fetch).query('stores:browse');
+    const bookList = await trpc(fetch).query('books:list');
     return { props: { storesInitialData, bookList } };
   };
 </script>
@@ -35,7 +35,7 @@
   let editorBusy = false;
   let editorErrors: EditorErrors;
 
-  const stores = useQuery(['stores:browse', query], () => trcp.query('stores:browse', query), {
+  const stores = useQuery(['stores:browse', query], () => trpc().query('stores:browse', query), {
     initialData: storesInitialData
   });
 
@@ -54,14 +54,14 @@
     editorErrors = undefined;
     editorBusy = true;
     editorVisible = true;
-    const data = await trcp.query('stores:read', e.detail.itemKey);
+    const data = await trpc().query('stores:read', e.detail.itemKey);
     if (data) store = { ...data, bookIds: data.books.map(({ id }) => id) };
     editorBusy = false;
   };
 
   const handleDelete = async (e: CustomEvent<{ itemKey: string }>) => {
     loading = true;
-    await trcp.mutation('stores:delete', e.detail.itemKey);
+    await trpc().mutation('stores:delete', e.detail.itemKey);
     $stores.refetch();
   };
 
@@ -74,7 +74,7 @@
   const handleEditorSave = async () => {
     editorBusy = true;
     try {
-      await trcp.mutation('stores:save', store);
+      await trpc().mutation('stores:save', store);
       editorVisible = false;
       store = newStore();
       $stores.refetch();

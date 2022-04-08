@@ -10,8 +10,8 @@
   import { useQuery } from '@sveltestack/svelte-query';
   import debounce from 'debounce';
 
-  export const load: Load = async () => {
-    const initialData = await trpc.query('authors:browse');
+  export const load: Load = async ({ fetch }) => {
+    const initialData = await trpc(fetch).query('authors:browse');
     return { props: { initialData } };
   };
 </script>
@@ -38,7 +38,7 @@
   let editorVisible = false;
   let editorBusy = false;
 
-  const authors = useQuery(['authors:browse', query], () => trpc.query('authors:browse', query), {
+  const authors = useQuery(['authors:browse', query], () => trpc().query('authors:browse', query), {
     initialData
   });
 
@@ -57,13 +57,13 @@
     editorErrors = undefined;
     editorBusy = true;
     editorVisible = true;
-    const data = await trpc.query('authors:read', e.detail.itemKey);
+    const data = await trpc().query('authors:read', e.detail.itemKey);
     if (data) author = { ...data, bio: data.bio || '' };
     editorBusy = false;
   };
 
   const handleDelete = async (e: CustomEvent<{ itemKey: string }>) => {
-    await trpc.mutation('authors:delete', e.detail.itemKey);
+    await trpc().mutation('authors:delete', e.detail.itemKey);
     $authors.refetch();
   };
 
@@ -76,7 +76,7 @@
   const handleEditorSave = async () => {
     editorBusy = true;
     try {
-      await trpc.mutation('authors:save', author);
+      await trpc().mutation('authors:save', author);
       editorVisible = false;
       author = newAuthor();
       $authors.refetch();
