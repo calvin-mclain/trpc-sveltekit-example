@@ -10,8 +10,11 @@
   import debounce from 'debounce';
 
   export const load: Load = async ({ fetch }) => {
-    const storesInitialData = await trpc(fetch).query('stores:browse');
-    const bookList = await trpc(fetch).query('books:list');
+    const trpcClient = trpc(fetch);
+    const [storesInitialData, bookList] = await Promise.all([
+      trpcClient.query('stores:browse'),
+      trpcClient.query('books:list')
+    ]);
     return { props: { storesInitialData, bookList } };
   };
 </script>
