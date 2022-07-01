@@ -29,7 +29,6 @@
     bookIds: []
   });
 
-  let loading = false;
   let query = '';
   export let storesInitialData: InferQueryOutput<'stores:browse'> = [];
   export let bookList: InferQueryOutput<'books:list'> = [];
@@ -63,7 +62,6 @@
   };
 
   const handleDelete = async (e: CustomEvent<{ itemKey: string }>) => {
-    loading = true;
     await trpc().mutation('stores:delete', e.detail.itemKey);
     $stores.refetch();
   };
